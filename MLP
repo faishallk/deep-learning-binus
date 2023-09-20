@@ -1,1 +1,91 @@
+# MLP Keras
+import keras
+from tensorflow.keras.models import Sequential
+import tensorflow as tf
+model = keras.models.Sequential()
+model.add(tf.keras.Input(shape=(15,)))
+#Dense implements the operation: output = activation(dot(input, 
+kernel) + bias)
+model.add(keras.layers.core.Dense(64, activation='sigmoid'))
+model.add(keras.layers.core.Dense(32, activation='sigmoid'))
+model.add(keras.layers.core.Dense(16, activation='sigmoid'))
+# compile model with optimizer, adjusted with this learning 
+rate and momentum
+sgd = keras.optimizers.SGD(learning_rate=0.01, momentum=0.9)
+model.compile(optimizer=sgd, loss='mse', metrics=['mse', 'mae', 
+'mape'])
+#model.compile(optimizer="sgd",loss='mse',metrics=['mse', 
+'mae', 'mape'])
+print(model.summary())
+
+
+# MLP Scikit-Learn
+import pandas as pd
+import numpy as np
+from sklearn.model_selection import train_test_split
+from sklearn.neural_network import MLPRegressor
+from sklearn.metrics import mean_squared_error, mean_absolute_error
+from sklearn.preprocessing import StandardScaler
+
+# Load data
+df = pd.read_csv('Customers.csv')
+df['Profession'].fillna('others', inplace=True)
+df_encode={"Gender": {"Male":1,"Female":0}}
+df=df.replace(df_encode)
+df_enc=pd.get_dummies(df['Profession'], prefix='Profession')
+df=pd.concat([df,df_enc], axis=1)
+
+# Define input and target
+df_input = df[['Gender', 'Age', 'Annual Income ($)', 'Work Experience', 
+'Family Size', 'Profession_Artist', 'Profession_Doctor',
+ 'Profession_Engineer', 'Profession_Entertainment', 
+'Profession_Executive', 'Profession_Healthcare', 'Profession_Homemaker',
+ 'Profession_Lawyer', 'Profession_Marketing', 
+'Profession_others']]
+df_target = df[['Spending Score (1-100)']]
+
+# Split data into train and test sets
+X_train, X_test, y_train, y_test = train_test_split(df_input, df_target, 
+test_size=0.2, random_state=42)
+# Scale data
+scaler = StandardScaler()
+X_train_scaled = scaler.fit_transform(X_train)
+X_test_scaled = scaler.transform(X_test)
+# Define parameter combinations
+hidden_layer_sizes = [(30,), (50,), (30, 30), (50, 50)]
+learning_rates = [0.001, 0.01, 0.1]
+momentums = [0.0, 0.5, 0.9]
+# Create a table to store the results
+results = pd.DataFrame(columns=['hidden_layer_sizes', 'learning_rate', 
+'momentum', 'MSE', 'MAE', 'MAPE'])
+# Loop through each parameter combination
+for hl_size in hidden_layer_sizes:
+ for lr in learning_rates:
+ for momentum in momentums:
+ 
+ # Train the model with the current parameter combination
+ model_reg = MLPRegressor(hidden_layer_sizes=hl_size,
+ activation='logistic',
+solver='sgd',
+learning_rate_init=lr,
+ momentum=momentum,
+ random_state=42)
+ model_reg.fit(X_train_scaled, y_train.values.ravel())
+ 
+ # Evaluate the model on test set
+ y_pred = model_reg.predict(X_test_scaled)
+ mse = mean_squared_error(y_test, y_pred)
+ mae = mean_absolute_error(y_test, y_pred)
+ mape = np.mean(np.abs((y_test - y_pred) / y_test)) * 100
+ 
+ # Append the results to the table
+ results = results.append({'hidden_layer_sizes': hl_size, 
+ 'learning_rate': lr, 
+'momentum': momentum, 
+'MSE': mse, 
+'MAE': mae, 
+'MAPE': mape}, 
+ignore_index=True)
+# Print the results
+print(results)
 
